@@ -1,128 +1,110 @@
-from functools import partial
+#!/usr/bin/env python3
+"""
+Computer version of the game hangman.
+
+Inspired by the classic text-based games distributed with some versions of BSD
+and linux.
+"""
+
 import os
 import random
 
-from graphics import Graphics
+import graphics  # Contains ASCII art for the game
+
+
+def clear_display():
+    """Sends appropriate 'clear screen' command to the system."""
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+
+def word_generator():
+    """Yields a generator object from the standard unix word list."""
+    f = open('/usr/share/dict/words')
+    for line in f.readlines():
+        yield line.strip()
+    else:
+        f.close()
 
 
 class Hangman():
-    graphics = Graphics()
+    def __init__(self):
+        self.guesses, self.bad_guesses = set(), set()
+        self.game_words = self.get_words()
+        self.current_word = self.game_words.pop().lower()
+        self.blanks = self.get_blanks()
+        self.game_over, self.game_won = False, False
 
-    def word_list(self):
-        f = open('/usr/share/dict/words')
-        for line in f.readlines():
-            yield line.strip()
-        else:
-            f.close()
+    def __str__(self):
+        """Allows game graphics and info to be displayed with a print() call"""
+        return ("{}\n{}\nSecret Word: {}\nGuessed: {}\nMissed: {}/7\n"
+                .format(graphics.TITLE_ART,
+                        graphics.GALLOWS_ART[len(self.bad_guesses)],
+                        self.blanks,
+                        ', '.join(sorted(self.guesses)),
+                        len(self.bad_guesses)
+                        ))
 
-    def word_length(self, word, length):
-        return len(word) <= length and len(word) > 5
+    def print_screen(self):
+        """Clears the screen then prints game graphics using __str__."""
+        clear_display()
+        print(self)
 
-    def filter_words(self, length):
-        return filter(
-            partial(self.word_length, length=length), self.word_list()
-            )
+    def get_words(self):
+        """Returns a random sample of 50 words in a list."""
+        return random.sample([word for word in word_generator()
+                              if len(word) >= 6], 50)
 
-    def clear_display(self):
-        os.system('cls' if os.name == 'nt' else 'clear')
-
-    def menu(self):
-        self.clear_display()
-        print(self.graphics.title)
-        print('[N]ew Game')
-        print('[H]elp')
-        print('[Q]uit')
-        choice = input('>>> ').lower()
-
-        if choice in 'nhq' and len(choice) == 1:
-            return choice
-        else:
-            return self.menu()
-
-    def get_difficulty(self):
-        print('Select Difficulty: [E]asy, [M]edium, or [H]ard')
-        difficulty = input('>>> ').lower()
-        if difficulty in 'emh'and len(difficulty) == 1:
-            return difficulty
-        else:
-            print('Invalid entry.')
-            return self.get_difficulty()
-
-    def draw_board(self):
-        return '_'*len(self.current_word)
-
-    def update_board(self):
+    def get_blanks(self):
+        """Generates blanks and letters for secret word."""
         return ''.join(letter if letter in self.guesses and
                        letter in self.current_word
                        else '_' for letter in self.current_word)
 
-    def setup(self):
-        self.missed = []
-        self.guesses = set()
-        self.difficulty = self.get_difficulty()
-        if self.difficulty == 'e':
-            self.word_list = self.easy
-        elif self.difficulty == 'm':
-            self.word_list = self.med
-        else:  # if self.difficulty == 'h':
-            self.word_list = self.hard
+    def get_guess(self):
+        """Gets a new guess from user and updates attributes as necessary."""
+        new_guess = input("Guess a letter: ")
+        if len(new_guess) > 1 or not new_guess.isalpha():
+            print("Please enter a (single) letter of the alphabet!")
+            return self.get_guess()
+        else:
+            self.guesses.add(new_guess)
+            self.bad_guesses = self.guesses.difference(set(self.current_word))
+            self.blanks = self.get_blanks()
 
-        self.current_word = self.word_list.pop().lower()
-        self.board = self.draw_board()
+    def set_state(self):
+        """ Sets game state via 'game_over' and 'game_won'"""
+        if len(self.bad_guesses) >= 7:
+            self.game_over, self.game_won = True, False
+        if '_' not in self.blanks:
+            self.game_over, self.game_won = True, True
 
-    def __init__(self):
-        self.easy = random.sample(list(self.filter_words(7)), 50)
-        self.med = random.sample(list(self.filter_words(9)), 50)
-        self.hard = random.sample(list(self.filter_words(12)), 50)
+    def play_again(self):
+        """Prompts user to quit or setup new round."""
+        if input('Try again? [Y]es/[N]o: ').lower() == 'y':
+            self.current_word = self.game_words.pop().lower()
+            self.guesses, self.bad_guesses = set(), set()
+            self.blanks = self.get_blanks()
+            self.game_over, self.game_won = False, False
+        else:
+            print("Thank you for playing!")
+            raise SystemExit
 
-        while True:
-            choice = self.menu()
-            if choice == 'n':
-                self.setup()
 
-                while True:
-                    self.clear_display()
-                    self.graphics.print_graphics(self.missed)
-                    print('Guesses: {}'.format(', '.join(self.guesses)))
-                    # print(self.current_word)
-                    print('Secret Word: {}'.format(self.board))
-                    print('Guess a letter or enter \'menu\'')
-                    self.guess = input('>>> ')
-                    self.guesses.add(self.guess)
+def game():
+    game = Hangman()  # Creates a new game instance.
+    while True:
+        while not game.game_over:
+            game.print_screen()  # Prints ASCII art, blanks, and info.
+            game.get_guess()  # Gets guess from user and updates attributes.
+            game.set_state()  # Checks and sets game state.
+        if game.game_won:  # If game is over, checks if game was won.
+            game.print_screen()
+            print("You guessed it - Great job!")
+        else:
+            game.print_screen()
+            print("You ran out of guesses. The word was '{}'."
+                  .format(game.current_word))
+        game.play_again()
 
-                    if self.guess == 'menu':
-                        break
-
-                    if self.guess in self.current_word:
-                        self.board = self.update_board()
-                    else:
-                        self.missed.append(self.guess)
-
-                    if len(self.missed) == 7:
-                        self.clear_display()
-                        self.graphics.print_graphics(self.missed)
-                        print('Sorry, you lost. The word was \"{}\".'
-                              .format(self.current_word))
-                        print('Try again? [Y]es/[N]o')
-
-                        if input('>>> ').lower() == 'y':
-                            break
-                        else:
-                            raise SystemExit
-
-                    if '_' not in self.board:
-                        print('You won! The word was \"{}\".'
-                              .format(self.current_word))
-                        print('Play again? [Y]es/[N]o')
-
-                        if input('>>> ').lower() == 'y':
-                            break
-                        else:
-                            raise SystemExit
-            # elif choice == 'h':
-                # Show help. Use docstring?
-            else:  # self.menu() == 'q':
-                raise SystemExit
-
-if __name__ == '__main__':
-    Hangman()
+if __name__ == '__main__':  # Execute game if run as script:
+    game()
