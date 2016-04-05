@@ -1,14 +1,16 @@
+"""
+ASCII art for hangman game
+"""
 
-
-class Graphics:
-    title = """
+TITLE_ART = """
 ()    ()   ()()()   ()    ()   ()()()   ()    ()   ()()()   ()    ()
 ()    ()  ()    ()  ()()  ()  ()        ()()()()  ()    ()  ()()  ()
 ()()()()  ()()()()  () () ()  ()  ()()  () () ()  ()()()()  () () ()
 ()    ()  ()    ()  ()  ()()  ()    ()  ()    ()  ()    ()  ()  ()()
 ()    ()  ()    ()  ()    ()   ()()()   ()    ()  ()    ()  ()    ()
-    """
-    gallows = ["""
+"""
+
+GALLOWS_ART = ["""
     ========@
     || //
     ||//
@@ -89,6 +91,3 @@ class Graphics:
 /_________________/ /
 |_________________|/
 """]
-
-    def print_graphics(self, missed_letters):
-        print('{}\n{}'.format(self.title, self.gallows[len(missed_letters)]))
