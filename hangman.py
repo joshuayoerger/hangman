@@ -71,7 +71,7 @@ class Hangman():
             self.bad_guesses = self.guesses.difference(set(self.current_word))
             self.blanks = self.get_blanks()
 
-    def set_state(self):
+    def update_state(self):
         """ Sets game state via 'game_over' and 'game_won'"""
         if len(self.bad_guesses) >= 7:
             self.game_over, self.game_won = True, False
@@ -96,15 +96,15 @@ def game():
         while not game.game_over:
             game.print_screen()  # Prints ASCII art, blanks, and info.
             game.get_guess()  # Gets guess from user and updates attributes.
-            game.set_state()  # Checks and sets game state.
-        if game.game_won:  # If game is over, checks if game was won.
+            game.update_state()  # Checks and sets game state.
+        if game.game_won:  # If game is over, checks if the user won.
             game.print_screen()
             print("You guessed it - Great job!")
-        else:
+        else:  # If the game is over, but the user lost
             game.print_screen()
             print("You ran out of guesses. The word was '{}'."
                   .format(game.current_word))
-        game.play_again()
+        game.play_again()  # Prompts the user to quit or setup new round.
 
 if __name__ == '__main__':  # Execute game if run as script:
     game()
